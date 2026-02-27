@@ -77,6 +77,12 @@ class DVRouter(DVRouterBase):
         assert port in self.ports.get_all_ports(), "Link should be up, but is not."
 
         ##### Begin Stage 1 #####
+        curr_latency = self.ports.get_latency(port)
+        self.table[host] = TableEntry(dst=host, port=port, latency=curr_latency, expire_time=FOREVER)
+
+        for host, entry in self.table.items():
+            print("Route to {} has a latency of {}".format(host, entry.latency))
+
 
         ##### End Stage 1 #####
 
@@ -92,6 +98,25 @@ class DVRouter(DVRouterBase):
         """
         
         ##### Begin Stage 2 #####
+
+        #Find the route first
+        entry = self.table.get(packet.dst)
+       
+       # Drop Packet if no route exists
+        if entry is None: 
+            return
+        
+        #Drop Packet is route latency is greater than or equal to INFINITY
+        if entry.latency >= INFINITY:
+            return
+        
+        # Drop Packet if outgoing link latency is greater then or equal to INFINITY
+        link_latency = self.ports.get_latency(entry.port)
+        if link_latency >= INFINITY:
+            return
+
+        self.send(packet, port= entry.port)
+
 
         ##### End Stage 2 #####
 
